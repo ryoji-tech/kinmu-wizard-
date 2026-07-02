@@ -24,33 +24,36 @@
   // YYYYMMDD 形式
   var dateParam = today.getFullYear() + mm + dd;
 
-  function findTodayRow() {
-    // テーブルの行を総当たりし、日付ラベルを含む行を探す
-    var rows = document.querySelectorAll("tr");
-    for (var i = 0; i < rows.length; i++) {
-      if (rows[i].textContent.indexOf(dateLabel) !== -1) {
-        return rows[i];
+  function findTodayDateInput() {
+    // 日付は <input type="button" value="07/02(木)"> のようにボタンのvalue属性に入っている
+    var candidates = document.querySelectorAll("input[type=button], input[type=submit], button");
+    for (var i = 0; i < candidates.length; i++) {
+      var v = (candidates[i].value || candidates[i].textContent || "").trim();
+      if (v.indexOf(dateLabel) === 0) {
+        return candidates[i];
       }
     }
     return null;
   }
 
-  function extractSite(row) {
-    // 1列目=日付, 2列目=業務名 という前提。ズレる場合はここを調整。
-    var cells = row.querySelectorAll("td, th");
-    if (cells.length >= 2) {
-      return cells[1].textContent.trim();
-    }
-    return "";
+  function extractSite(dateInput) {
+    // 日付ボタンが入っているセルの、次のセル（業務名）を取得する
+    var td = dateInput.closest("td");
+    var row = td ? td.closest("tr") : null;
+    if (!td || !row) return "";
+    var cells = Array.prototype.slice.call(row.querySelectorAll("td"));
+    var idx = cells.indexOf(td);
+    if (idx === -1 || idx + 1 >= cells.length) return "";
+    return cells[idx + 1].textContent.trim();
   }
 
-  var row = findTodayRow();
-  if (!row) {
+  var dateInput = findTodayDateInput();
+  if (!dateInput) {
     alert("今日（" + dateLabel + "）の行が見つかりませんでした。ページが正しく開かれているか確認してください。");
     return;
   }
 
-  var site = extractSite(row);
+  var site = extractSite(dateInput);
   if (!site) {
     alert("現場名を取得できませんでした。手動でウィザードに入力してください。");
   }
