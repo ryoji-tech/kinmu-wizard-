@@ -39,10 +39,11 @@
   function extractSite(dateInput) {
     // 日付ボタンのセルより後ろで、最初に見つかった「数字だけではない」セルを業務名とみなす
     // (日付と業務名の間に、行番号らしき数字だけのセルが挟まる場合があるため)
-    var td = dateInput.closest("td");
+    // 日付ボタンは <td> ではなく <th> に入っている場合があるため両方見る
+    var td = dateInput.closest("td, th");
     var row = td ? td.closest("tr") : null;
     if (!td || !row) return "";
-    var cells = Array.prototype.slice.call(row.querySelectorAll("td"));
+    var cells = Array.prototype.slice.call(row.querySelectorAll("td, th"));
     var idx = cells.indexOf(td);
     if (idx === -1) return "";
     for (var i = idx + 1; i < cells.length; i++) {
