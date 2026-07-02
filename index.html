@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>勤務表入力 — 良次の仕組み</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  min-height: 100vh;
+  background: #0f1a0c;
+  color: #e8f5e2;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  max-width: 480px;
+  margin: 0 auto;
+  padding-bottom: 80px;
+}
+button, input { font-family: inherit; }
+
+/* Header */
+.header {
+  padding: 24px 20px 16px;
+  border-bottom: 1px solid #1e2a1a;
+}
+.header-label { font-size: 11px; color: #4a7a40; letter-spacing: 2px; text-transform: uppercase; }
+.header-title { font-size: 22px; font-weight: 700; margin-top: 2px; }
+
+/* Tabs */
+.tabs { display: flex; border-bottom: 1px solid #1e2a1a; }
+.tab-btn {
+  flex: 1; padding: 12px 0;
+  background: none; border: none;
+  color: #4a7a40; font-size: 14px; cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+.tab-btn.active { color: #4ade80; font-weight: 700; border-bottom-color: #4ade80; }
+
+/* Page */
+.page { display: none; padding: 20px; }
+.page.active { display: block; }
+
+/* Wizard */
+.step-label { font-size: 11px; color: #4a7a40; letter-spacing: 1px; margin-bottom: 6px; }
+.step-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+.field-group { margin-bottom: 18px; }
+.field-label { font-size: 13px; color: #4a7a40; margin-bottom: 6px; display: block; }
+.field-input {
+  width: 100%; background: #131f10; border: 1px solid #1e2a1a;
+  border-radius: 12px; padding: 12px 14px; color: #e8f5e2;
+  font-size: 16px;
+}
+.field-input:focus { outline: none; border-color: #4ade80; }
+.time-row { display: flex; gap: 12px; }
+.time-row .field-group { flex: 1; }
+
+.checkbox-row {
+  display: flex; align-items: center; gap: 14px;
+  background: #131f10; border: 1px solid #1e2a1a;
+  border-radius: 12px; padding: 14px 16px; margin-bottom: 10px;
+  cursor: pointer; transition: all 0.15s;
+}
+.checkbox-row.checked { background: #1a2a10; border-color: #4ade80; }
+.checkbox-row input { display: none; }
+.checkbox-mark {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: #1e2a1a; display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0; font-size: 14px;
+}
+.checkbox-row.checked .checkbox-mark { background: #4ade80; color: #0f1a0c; }
+.checkbox-label { font-size: 15px; }
+
+.summary-card {
+  background: #131f10; border-radius: 12px; padding: 16px;
+  margin-bottom: 20px;
+}
+.summary-row {
+  display: flex; justify-content: space-between;
+  padding: 8px 0; border-bottom: 1px solid #1e2a1a;
+  font-size: 14px;
+}
+.summary-row:last-child { border-bottom: none; }
+.summary-row .k { color: #4a7a40; }
+.summary-row .v { font-weight: 600; }
+
+.wizard-nav { display: flex; gap: 10px; margin-top: 24px; }
+.btn {
+  flex: 1; padding: 14px; border-radius: 12px; border: none;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+}
+.btn-primary { background: #4ade80; color: #0f1a0c; }
+.btn-secondary { background: #1e2a1a; color: #e8f5e2; }
+
+.saved-banner {
+  text-align: center; padding: 40px 20px;
+}
+.saved-banner .icon { font-size: 40px; margin-bottom: 12px; }
+.saved-banner .title { font-size: 17px; font-weight: 700; margin-bottom: 20px; }
+
+/* History tab */
+.entry-card {
+  background: #131f10; border-radius: 12px; padding: 14px 16px;
+  margin-bottom: 12px;
+}
+.entry-top { display: flex; justify-content: space-between; align-items: center; }
+.entry-date { font-size: 13px; color: #4a7a40; }
+.entry-site { font-size: 15px; font-weight: 700; margin-top: 2px; }
+.entry-time { font-size: 13px; color: #c8e6c0; margin-top: 6px; }
+.entry-tags { display: flex; gap: 6px; margin-top: 8px; }
+.entry-tag {
+  font-size: 11px; padding: 3px 8px; border-radius: 10px;
+  background: #1e2a1a; color: #4ade80;
+}
+.entry-actions { display: flex; gap: 8px; margin-top: 10px; }
+.entry-actions button {
+  flex: 1; padding: 8px; border-radius: 8px; border: none;
+  background: #1e2a1a; color: #e8f5e2; font-size: 12px; cursor: pointer;
+}
+.empty-log { text-align: center; padding: 40px; color: #4a7a40; background: #131f10; border-radius: 12px; }
+.empty-log .icon { font-size: 32px; }
+.empty-log .text { margin-top: 8px; font-size: 13px; }
+.export-btn {
+  width: 100%; padding: 14px; border-radius: 12px; border: none;
+  background: #1e2a1a; color: #4ade80; font-size: 14px; font-weight: 700;
+  cursor: pointer; margin-bottom: 16px;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-label">Kinmu Wizard</div>
+  <div class="header-title">勤務表入力</div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('wizard',this)">入力</button>
+  <button class="tab-btn" onclick="showTab('history',this)">履歴</button>
+</div>
+
+<!-- WIZARD -->
+<div class="page active" id="page-wizard">
+
+  <div class="wizard-step" data-step="1">
+    <div class="step-label">STEP 1 / 4</div>
+    <div class="step-title">日付・現場</div>
+    <div class="field-group">
+      <label class="field-label">日付</label>
+      <input class="field-input" type="date" id="inputDate">
+    </div>
+    <div class="field-group">
+      <label class="field-label">現場（自動セット・修正可）</label>
+      <input class="field-input" type="text" id="inputSite" placeholder="例: 千石(事務)">
+    </div>
+    <div class="wizard-nav">
+      <button class="btn btn-primary" onclick="nextStep()">次へ</button>
+    </div>
+  </div>
+
+  <div class="wizard-step" data-step="2">
+    <div class="step-label">STEP 2 / 4</div>
+    <div class="step-title">開始・終了時間</div>
+    <div class="time-row">
+      <div class="field-group">
+        <label class="field-label">開始時間</label>
+        <input class="field-input" type="time" id="inputStart">
+      </div>
+      <div class="field-group">
+        <label class="field-label">終了時間</label>
+        <input class="field-input" type="time" id="inputEnd">
+      </div>
+    </div>
+    <div class="wizard-nav">
+      <button class="btn btn-secondary" onclick="prevStep()">戻る</button>
+      <button class="btn btn-primary" onclick="nextStep()">次へ</button>
+    </div>
+  </div>
+
+  <div class="wizard-step" data-step="3">
+    <div class="step-label">STEP 3 / 4</div>
+    <div class="step-title">移動・宿泊</div>
+    <label class="checkbox-row" id="rowTrain" onclick="toggleFlag(event,'train')">
+      <input type="checkbox" id="inputTrain">
+      <div class="checkbox-mark"></div>
+      <div class="checkbox-label">🚃 電車</div>
+    </label>
+    <label class="checkbox-row" id="rowTaxi" onclick="toggleFlag(event,'taxi')">
+      <input type="checkbox" id="inputTaxi">
+      <div class="checkbox-mark"></div>
+      <div class="checkbox-label">🚕 TAXI</div>
+    </label>
+    <label class="checkbox-row" id="rowStay" onclick="toggleFlag(event,'stay')">
+      <input type="checkbox" id="inputStay">
+      <div class="checkbox-mark"></div>
+      <div class="checkbox-label">🛏 泊り</div>
+    </label>
+    <div class="wizard-nav">
+      <button class="btn btn-secondary" onclick="prevStep()">戻る</button>
+      <button class="btn btn-primary" onclick="nextStep()">次へ</button>
+    </div>
+  </div>
+
+  <div class="wizard-step" data-step="4">
+    <div class="step-label">STEP 4 / 4</div>
+    <div class="step-title">確認</div>
+    <div class="summary-card" id="confirmSummary"></div>
+    <div class="wizard-nav">
+      <button class="btn btn-secondary" onclick="prevStep()">戻る</button>
+      <button class="btn btn-primary" onclick="saveEntry()">保存する</button>
+    </div>
+  </div>
+
+  <div class="wizard-step" data-step="done">
+    <div class="saved-banner">
+      <div class="icon">✅</div>
+      <div class="title">保存しました！</div>
+      <button class="btn btn-primary" onclick="resetWizard()" style="width:100%">もう1件入力する</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- HISTORY -->
+<div class="page" id="page-history">
+  <button class="export-btn" onclick="exportEntries()">📋 全件コピー（エクスポート）</button>
+  <div id="entryList"></div>
+</div>
+
+<script>
+const STORAGE_KEY = "kinmu-wizard-entries";
+
+function loadEntries() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; }
+}
+function saveEntries(list) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); } catch {}
+}
+
+let entries = loadEntries();
+let currentStep = 1;
+let flags = { train: false, taxi: false, stay: false };
+let editingIndex = null;
+
+function todayISO() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function parseDateParam(raw) {
+  if (!raw) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  if (/^\d{8}$/.test(raw)) return `${raw.slice(0,4)}-${raw.slice(4,6)}-${raw.slice(6,8)}`;
+  if (/^\d{4}$/.test(raw)) {
+    const y = new Date().getFullYear();
+    return `${y}-${raw.slice(0,2)}-${raw.slice(2,4)}`;
+  }
+  return null;
+}
+
+function initFromParams() {
+  const params = new URLSearchParams(location.search);
+  const date = parseDateParam(params.get('date')) || todayISO();
+  const site = params.get('site') || '';
+  document.getElementById('inputDate').value = date;
+  document.getElementById('inputSite').value = site;
+}
+
+function showStep(step) {
+  document.querySelectorAll('.wizard-step').forEach(el => el.style.display = 'none');
+  document.querySelector(`.wizard-step[data-step="${step}"]`).style.display = 'block';
+  currentStep = step;
+  if (step === 4) renderConfirm();
+}
+
+function nextStep() {
+  if (currentStep === 1) {
+    if (!document.getElementById('inputDate').value) { alert('日付を選んでください'); return; }
+    if (!document.getElementById('inputSite').value.trim()) { alert('現場を入力してください'); return; }
+  }
+  showStep(currentStep + 1);
+}
+function prevStep() { showStep(currentStep - 1); }
+
+function toggleFlag(e, key) {
+  e.preventDefault();
+  flags[key] = !flags[key];
+  document.getElementById('input' + key.charAt(0).toUpperCase() + key.slice(1)).checked = flags[key];
+  document.getElementById('row' + key.charAt(0).toUpperCase() + key.slice(1)).classList.toggle('checked', flags[key]);
+}
+
+function renderConfirm() {
+  const date = document.getElementById('inputDate').value;
+  const site = document.getElementById('inputSite').value;
+  const start = document.getElementById('inputStart').value || '未入力';
+  const end = document.getElementById('inputEnd').value || '未入力';
+  const tags = [];
+  if (flags.train) tags.push('🚃 電車');
+  if (flags.taxi) tags.push('🚕 TAXI');
+  if (flags.stay) tags.push('🛏 泊り');
+  document.getElementById('confirmSummary').innerHTML = `
+    <div class="summary-row"><span class="k">日付</span><span class="v">${date}</span></div>
+    <div class="summary-row"><span class="k">現場</span><span class="v">${site}</span></div>
+    <div class="summary-row"><span class="k">開始</span><span class="v">${start}</span></div>
+    <div class="summary-row"><span class="k">終了</span><span class="v">${end}</span></div>
+    <div class="summary-row"><span class="k">移動/宿泊</span><span class="v">${tags.length ? tags.join(' ') : 'なし'}</span></div>
+  `;
+}
+
+function saveEntry() {
+  const entry = {
+    date: document.getElementById('inputDate').value,
+    site: document.getElementById('inputSite').value,
+    start: document.getElementById('inputStart').value,
+    end: document.getElementById('inputEnd').value,
+    train: flags.train,
+    taxi: flags.taxi,
+    stay: flags.stay,
+    savedAt: new Date().toISOString(),
+  };
+  if (editingIndex !== null) {
+    entries[editingIndex] = entry;
+  } else {
+    entries.push(entry);
+  }
+  saveEntries(entries);
+  entries = loadEntries();
+  editingIndex = null;
+  showStep('done');
+}
+
+function resetWizard() {
+  editingIndex = null;
+  flags = { train: false, taxi: false, stay: false };
+  document.getElementById('inputDate').value = todayISO();
+  document.getElementById('inputSite').value = '';
+  document.getElementById('inputStart').value = '';
+  document.getElementById('inputEnd').value = '';
+  ['train','taxi','stay'].forEach(key => {
+    document.getElementById('input' + key.charAt(0).toUpperCase() + key.slice(1)).checked = false;
+    document.getElementById('row' + key.charAt(0).toUpperCase() + key.slice(1)).classList.remove('checked');
+  });
+  showStep(1);
+}
+
+function editEntry(idx) {
+  const e = entries[idx];
+  editingIndex = idx;
+  document.getElementById('inputDate').value = e.date;
+  document.getElementById('inputSite').value = e.site;
+  document.getElementById('inputStart').value = e.start;
+  document.getElementById('inputEnd').value = e.end;
+  flags = { train: e.train, taxi: e.taxi, stay: e.stay };
+  ['train','taxi','stay'].forEach(key => {
+    document.getElementById('input' + key.charAt(0).toUpperCase() + key.slice(1)).checked = flags[key];
+    document.getElementById('row' + key.charAt(0).toUpperCase() + key.slice(1)).classList.toggle('checked', flags[key]);
+  });
+  document.querySelectorAll('.tab-btn')[0].click();
+  showStep(1);
+}
+
+function deleteEntry(idx) {
+  if (!confirm('この記録を削除しますか？')) return;
+  entries.splice(idx, 1);
+  saveEntries(entries);
+  entries = loadEntries();
+  renderHistory();
+}
+
+function renderHistory() {
+  const list = document.getElementById('entryList');
+  if (entries.length === 0) {
+    list.innerHTML = `<div class="empty-log"><div class="icon">📝</div><div class="text">まだ記録がありません</div></div>`;
+    return;
+  }
+  const sorted = entries.map((e, i) => ({...e, _idx: i})).sort((a,b) => b.date.localeCompare(a.date));
+  list.innerHTML = sorted.map(e => {
+    const tags = [];
+    if (e.train) tags.push('🚃 電車');
+    if (e.taxi) tags.push('🚕 TAXI');
+    if (e.stay) tags.push('🛏 泊り');
+    return `<div class="entry-card">
+      <div class="entry-top">
+        <div>
+          <div class="entry-date">${e.date}</div>
+          <div class="entry-site">${e.site}</div>
+        </div>
+      </div>
+      <div class="entry-time">${e.start || '--:--'} 〜 ${e.end || '--:--'}</div>
+      ${tags.length ? `<div class="entry-tags">${tags.map(t=>`<span class="entry-tag">${t}</span>`).join('')}</div>` : ''}
+      <div class="entry-actions">
+        <button onclick="editEntry(${e._idx})">編集</button>
+        <button onclick="deleteEntry(${e._idx})">削除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function exportEntries() {
+  const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
+  const text = sorted.map(e =>
+    [e.date, e.site, e.start, e.end, e.train?'電車':'', e.taxi?'TAXI':'', e.stay?'泊り':''].join('\t')
+  ).join('\n');
+  navigator.clipboard.writeText(text).then(() => {
+    alert('コピーしました（' + sorted.length + '件）');
+  }).catch(() => {
+    prompt('コピーできなかったので、以下を手動でコピーしてください:', text);
+  });
+}
+
+function showTab(name, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'history') renderHistory();
+}
+
+// Init
+initFromParams();
+showStep(1);
+</script>
+</body>
+</html>
