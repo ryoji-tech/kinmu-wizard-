@@ -37,14 +37,21 @@
   }
 
   function extractSite(dateInput) {
-    // 日付ボタンが入っているセルの、次のセル（業務名）を取得する
+    // 日付ボタンのセルより後ろで、最初に見つかった「数字だけではない」セルを業務名とみなす
+    // (日付と業務名の間に、行番号らしき数字だけのセルが挟まる場合があるため)
     var td = dateInput.closest("td");
     var row = td ? td.closest("tr") : null;
     if (!td || !row) return "";
     var cells = Array.prototype.slice.call(row.querySelectorAll("td"));
     var idx = cells.indexOf(td);
-    if (idx === -1 || idx + 1 >= cells.length) return "";
-    return cells[idx + 1].textContent.trim();
+    if (idx === -1) return "";
+    for (var i = idx + 1; i < cells.length; i++) {
+      var text = cells[i].textContent.trim();
+      if (text && !/^\d+$/.test(text)) {
+        return text;
+      }
+    }
+    return "";
   }
 
   var dateInput = findTodayDateInput();
