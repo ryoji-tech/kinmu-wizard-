@@ -12,8 +12,7 @@
 // 実際のページのDOMに合わせて調整してください。
 
 (function () {
-  // ↓ ここをGitHub PagesのURLに書き換える
-  var WIZARD_URL = "https://YOUR_GITHUB_USERNAME.github.io/YOUR_REPO/";
+  var WIZARD_URL = "https://ryoji-tech.github.io/kinmu-wizard-/";
 
   function pad(n) { return String(n).padStart(2, "0"); }
 
